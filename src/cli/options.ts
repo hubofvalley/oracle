@@ -290,6 +290,11 @@ export function resolveApiModel(modelValue: string): ModelName {
     }
     return "gpt-5.1-codex";
   }
+  if (normalized === "gemini-4-argon-high") {
+    throw new InvalidArgumentError(
+      "Gemini 4 Argon High is browser-only. Use --engine browser --model gemini-4-argon-high.",
+    );
+  }
   if (isGeminiDeepThinkAlias(normalized)) {
     throw new InvalidArgumentError(
       "Gemini Deep Think is browser-only today. Use --engine browser --model gemini-3-deep-think.",
@@ -365,6 +370,9 @@ export function inferModelFromLabel(modelValue: string): ModelName {
   }
   if (isGeminiDeepThinkAlias(normalized)) {
     return "gemini-3-pro-deep-think" as ModelName;
+  }
+  if (normalized === "gemini-4-argon-high") {
+    return "gemini-4-argon-high" as ModelName;
   }
   if (normalized.includes("gemini")) {
     if (normalized.includes("3.5") && normalized.includes("flash")) {

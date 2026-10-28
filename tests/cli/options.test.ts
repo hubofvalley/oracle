@@ -255,6 +255,13 @@ describe("resolveApiModel", () => {
     );
   });
 
+  test("Argon High stays browser-only and preserves the browser model id", () => {
+    expect(inferModelFromLabel("gemini-4-argon-high")).toBe("gemini-4-argon-high");
+    expect(() => resolveApiModel("gemini-4-argon-high")).toThrow(
+      "Gemini 4 Argon High is browser-only",
+    );
+  });
+
   test("keeps GPT-5.6 API ids available for engine-aware validation", () => {
     expect(resolveApiModel("gpt-5.6")).toBe("gpt-5.6");
     expect(resolveApiModel("gpt-5.6-sol")).toBe("gpt-5.6-sol");
