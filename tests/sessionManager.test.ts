@@ -430,6 +430,54 @@ describe("session lifecycle", () => {
     expect(stored.status).toBe("running");
   });
 
+  test("fails a foreground session immediately when its recorded worker has exited", async () => {
+    const meta = await sessionModule.initializeSession(
+      { prompt: "Dead foreground worker", model: "gemini-4-argon-high", mode: "browser" },
+      "/tmp/cwd",
+    );
+    await sessionModule.updateSessionMetadata(meta.id, {
+      status: "running",
+      startedAt: new Date().toISOString(),
+      mode: "browser",
+      lifecycle: {
+        engine: "browser",
+        execution: "foreground",
+        attached: true,
+        detached: false,
+        workerPid: 2_147_483_647,
+        reattachCommand: `oracle session ${meta.id}`,
+      },
+    });
+
+    const refreshed = await sessionModule.readSessionMetadata(meta.id);
+    expect(refreshed?.status).toBe("error");
+    expect(refreshed?.errorMessage).toMatch(/foreground session worker exited/i);
+    expect(refreshed?.response?.incompleteReason).toBe("incomplete-capture");
+  });
+
+  test("keeps a foreground session running while its recorded worker is alive", async () => {
+    const meta = await sessionModule.initializeSession(
+      { prompt: "Active foreground", model: "gpt-5.6-sol", mode: "browser" },
+      "/tmp/cwd",
+    );
+    await sessionModule.updateSessionMetadata(meta.id, {
+      status: "running",
+      startedAt: new Date(Date.now() - sessionModule.ZOMBIE_MAX_AGE_MS - 60_000).toISOString(),
+      mode: "browser",
+      lifecycle: {
+        engine: "browser",
+        execution: "foreground",
+        attached: true,
+        detached: false,
+        workerPid: process.pid,
+        reattachCommand: `oracle session ${meta.id}`,
+      },
+    });
+
+    const refreshed = await sessionModule.readSessionMetadata(meta.id);
+    expect(refreshed?.status).toBe("running");
+  });
+
   test("marks running browser sessions as error when Chrome runtime is gone", async () => {
     const meta = await sessionModule.initializeSession(
       { prompt: "Browser dead", model: "gpt-5.2-pro", mode: "browser" },
