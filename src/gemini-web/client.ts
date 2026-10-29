@@ -484,13 +484,6 @@ export async function runGeminiWebWithFallback(
         `Gemini 4 Argon High model verification failed: upstream reported ${reportedModel ?? "unknown"}.`,
       );
     }
-    if (
-      /^I encountered an error doing what you asked\. Could you try again\?$/i.test(
-        succeeded.text.trim(),
-      )
-    ) {
-      throw new Error("Gemini 4 Argon High returned an upstream error response.");
-    }
     return { ...succeeded, effectiveModel: input.model };
   }
   if (isGeminiModelUnavailable(attempt.errorCode) && input.model !== FALLBACK_GEMINI_WEB_MODEL) {

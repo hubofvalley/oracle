@@ -95,7 +95,7 @@ describe("Gemini web model fallback", () => {
     },
   );
 
-  it("does not report an Argon upstream error reply as a successful completion", async () => {
+  it("preserves legitimate answer text that resembles a generic upstream error sentence", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
       if (String(input) === "https://gemini.google.com/app") {
         return new Response('"SNlM0e":"test-access-token"');
@@ -108,13 +108,30 @@ describe("Gemini web model fallback", () => {
       );
     });
 
+    const output = await runGeminiWebWithFallback({
+      prompt: "Reply exactly: I encountered an error doing what you asked. Could you try again?",
+      model: "gemini-4-argon-high",
+      cookieMap: {},
+    });
+    expect(output.text).toBe("I encountered an error doing what you asked. Could you try again?");
+    expect(output.effectiveModel).toBe("gemini-4-argon-high");
+  });
+
+  it("rejects Argon protocol errors using the parsed error code rather than answer prose", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      if (String(input) === "https://gemini.google.com/app") {
+        return new Response('"SNlM0e":"test-access-token"');
+      }
+      return new Response(unavailableResponse(1061), { status: 200 });
+    });
+
     await expect(
       runGeminiWebWithFallback({
         prompt: "test",
         model: "gemini-4-argon-high",
         cookieMap: {},
       }),
-    ).rejects.toThrow("Gemini 4 Argon High returned an upstream error response.");
+    ).rejects.toThrow("Gemini web request failed with error code 1061.");
   });
 
   it("fails when the requested model is unavailable and fallback is disabled", async () => {
