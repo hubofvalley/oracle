@@ -395,6 +395,33 @@ describe("session lifecycle", () => {
     expect(refreshed?.status).toBe("running");
   });
 
+  test("keeps legacy foreground browser sessions without workerPid on Chrome-runtime semantics", async () => {
+    const meta = await sessionModule.initializeSession(
+      { prompt: "Legacy foreground", model: "gpt-5.6-sol", mode: "browser" },
+      "/tmp/cwd",
+    );
+    await sessionModule.updateSessionMetadata(meta.id, {
+      status: "running",
+      mode: "browser",
+      lifecycle: {
+        engine: "browser",
+        execution: "foreground",
+        attached: true,
+        detached: false,
+        reattachCommand: `oracle session ${meta.id}`,
+      },
+      browser: {
+        runtime: {
+          chromePid: process.pid,
+        },
+      },
+    });
+
+    const refreshed = await sessionModule.readSessionMetadata(meta.id);
+    expect(refreshed?.status).toBe("running");
+    expect(refreshed?.lifecycle?.workerPid).toBeUndefined();
+  });
+
   test("keeps running browser sessions while their detached worker is alive", async () => {
     const meta = await sessionModule.initializeSession(
       { prompt: "Browser worker live", model: "gpt-5.2-pro", mode: "browser" },
